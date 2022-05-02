@@ -1,13 +1,9 @@
 package com.example.tutkdemo
 
-import android.net.LocalServerSocket
-import android.net.LocalSocket
-import android.net.LocalSocketAddress
 import android.util.Log
 import com.tutk.IOTC.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import java.net.Socket
+import java.net.*
 
 
 class AVProvider(private val uid: String, private val licenceKay: String) {
@@ -21,15 +17,22 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
     private val audioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO) + defaultErrorHandler
 
 
-    var audioSocketServer = LocalServerSocket("com.example.tutkdemo.audioSocket")
-    private val audioSocket = LocalSocket()
-    val videoSocketServer = LocalServerSocket("com.example.tutkdemo.videoSocket")
-    private val videoSocket = LocalSocket()
+    var localhostAddr = InetAddress.getByAddress(localhost)
+    var audioPort = 6666
+    var videoPort = 6667
+    var audioAddr: SocketAddress = InetSocketAddress(localhostAddr, audioPort)
+    var videoAddr: SocketAddress = InetSocketAddress(localhostAddr, videoPort)
+
+
+    var audioSocketServer = ServerSocket(audioPort)
+    private val audioSocket = Socket()
+    val videoSocketServer = ServerSocket(videoPort)
+    private val videoSocket = Socket()
 
     fun init() = defaultScope.launch {
         println("StreamClient start...")
-        videoSocket.connect(LocalSocketAddress("com.example.tutkdemo.videoSocket"))
-        audioSocket.connect(LocalSocketAddress("com.example.tutkdemo.audioSocket"))
+        videoSocket.connect(videoAddr)
+        audioSocket.connect(audioAddr)
 
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
         System.out.printf("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
@@ -266,6 +269,8 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
         const val AUDIO_BUF_SIZE = 1024
         const val FRAME_INFO_SIZE = 16
         const val VIDEO_BUF_SIZE = 100000
+        val localhost = byteArrayOf(127, 0, 0, 1)
+
     }
 
 
