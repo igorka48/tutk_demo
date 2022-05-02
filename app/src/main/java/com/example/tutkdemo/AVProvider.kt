@@ -1,11 +1,16 @@
 package com.example.tutkdemo
 
+import android.net.LocalServerSocket
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.util.Log
 import com.tutk.IOTC.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
+import java.net.Socket
 
-class VideoProvider(private val uid: String, private val licenceKay: String) {
+
+class AVProvider(private val uid: String, private val licenceKay: String) {
 
     private val defaultErrorHandler = CoroutineExceptionHandler { _, exception ->
         Log.e("", "${this.javaClass.name} got $exception")
@@ -16,11 +21,15 @@ class VideoProvider(private val uid: String, private val licenceKay: String) {
     private val audioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO) + defaultErrorHandler
 
 
-    val audio: MutableSharedFlow<ByteArray> = MutableSharedFlow()
-    val video: MutableSharedFlow<ByteArray> = MutableSharedFlow()
+    var audioSocketServer = LocalServerSocket("com.example.tutkdemo.audioSocket")
+    private val audioSocket = LocalSocket()
+    val videoSocketServer = LocalServerSocket("com.example.tutkdemo.videoSocket")
+    private val videoSocket = LocalSocket()
 
     fun init() = defaultScope.launch {
         println("StreamClient start...")
+        videoSocket.connect(LocalSocketAddress("com.example.tutkdemo.videoSocket"))
+        audioSocket.connect(LocalSocketAddress("com.example.tutkdemo.audioSocket"))
 
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
         System.out.printf("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
@@ -172,7 +181,7 @@ class VideoProvider(private val uid: String, private val licenceKay: String) {
                 continue
             }
 
-            audio.emit(audioBuffer.copyOfRange(0, ret - 1))
+            audioSocket.outputStream.write(audioBuffer, 0, ret)
             // Now the data is ready in audioBuffer[0 ... ret - 1]
             // Do something here
         }
@@ -244,7 +253,7 @@ class VideoProvider(private val uid: String, private val licenceKay: String) {
             }
             // Now the data is ready in videoBuffer[0 ... ret - 1]
             // Do something here
-            video.emit(videoBuffer.copyOfRange(0, ret - 1))
+            videoSocket.outputStream.write(videoBuffer, 0, ret)
         }
 
         System.out.printf(

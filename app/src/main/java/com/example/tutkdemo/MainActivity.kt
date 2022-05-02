@@ -2,25 +2,24 @@ package com.example.tutkdemo
 
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.github.kokorin.jaffree.ffmpeg.FFmpeg
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DataSource
-import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.withContext
+import java.io.InputStream
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var playerView: VideoView
     private lateinit var player: ExoPlayer
-    private lateinit var videoProvider: VideoProvider
+    private lateinit var AVProvider: AVProvider
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,30 +29,45 @@ class MainActivity : AppCompatActivity() {
 
         player = ExoPlayer.Builder(this).build()
 
-        videoProvider = VideoProvider(
+        AVProvider = AVProvider(
             getString(R.string.deviceUID),
             getString(R.string.licenseKey)
         )
-        videoProvider.init()
+        AVProvider.init()
+
 
         lifecycleScope.launch {
-            videoProvider.audio.collect {
-                Log.d("Audio", byteArrayToHexStr(it))
+            withContext(Dispatchers.IO) {
+                val client = AVProvider.audioSocketServer.accept()
+                withContext(Dispatchers.Main) {
+                    prepareExoPlayerAudioFromByteArray(client.inputStream)
+                }
             }
         }
-        lifecycleScope.launch {
-            videoProvider.video.collect {
-                Log.d("Video", byteArrayToHexStr(it))
-            }
-        }
+
+
+//        lifecycleScope.launch{
+//            withContext(Dispatchers.IO){
+//                val client = videoProvider.videoSocketServer.accept()
+//                val buffer = ByteArray(VIDEO_BUF_SIZE)
+//                while (true){
+//                    client.inputStream.read(buffer, 0, buffer.size)
+//                    Log.d("Video", byteArrayToHexStr(buffer))
+//                }
+//            }
+//        }
+
+
     }
 
-    fun prepareExoPlayerAudioFromByteArray(outputStream: ByteArrayOutputStream) {
-        val byteArrayDataSource = ByteBufferDataSource(outputStream)
+    fun prepareExoPlayerAudioFromByteArray(inputStream: InputStream) {
+        val byteArrayDataSource = InputStreamDataSource(inputStream)
         val extractorsFactory = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
         val factory: DataSource.Factory = DataSource.Factory { byteArrayDataSource }
-        val audioSource = ProgressiveMediaSource.Factory(factory, extractorsFactory).createMediaSource(
-            MediaItem.fromUri(Uri.parse("bytes:///" + "audio")))
+        val audioSource =
+            ProgressiveMediaSource.Factory(factory, extractorsFactory).createMediaSource(
+                MediaItem.fromUri(Uri.parse("bytes:///" + "audio"))
+            )
         player.setMediaSource(audioSource)
         player.prepare()
         player.play()
