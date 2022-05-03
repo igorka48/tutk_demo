@@ -18,21 +18,19 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
 
 
     var localhostAddr = InetAddress.getByAddress(localhost)
-    var audioPort = 6666
-    var videoPort = 6667
     var audioAddr: SocketAddress = InetSocketAddress(localhostAddr, audioPort)
     var videoAddr: SocketAddress = InetSocketAddress(localhostAddr, videoPort)
 
 
-    var audioSocketServer = ServerSocket(audioPort)
-    private val audioSocket = Socket()
-    val videoSocketServer = ServerSocket(videoPort)
-    private val videoSocket = Socket()
+    private val audioSocketServer = ServerSocket(audioPort)
+    private val videoSocketServer = ServerSocket(videoPort)
+    val outSocketServer = ServerSocket(outputPort)
 
-    fun init() = defaultScope.launch {
+    private var videoSocket: Socket? = null
+    private var audioSocket: Socket? = null
+
+    fun initAV() = defaultScope.launch {
         println("StreamClient start...")
-        videoSocket.connect(videoAddr)
-        audioSocket.connect(audioAddr)
 
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
         System.out.printf("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
@@ -128,6 +126,7 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
     }
 
     private suspend fun readAudio(avIndex: Int) {
+        audioSocket = audioSocketServer.accept()
         System.out.printf(
             "[%s] Start\n",
             Thread.currentThread().name
@@ -184,7 +183,7 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
                 continue
             }
 
-            audioSocket.outputStream.write(audioBuffer, 0, ret)
+            audioSocket?.outputStream?.write(audioBuffer, 0, ret)
             // Now the data is ready in audioBuffer[0 ... ret - 1]
             // Do something here
         }
@@ -200,7 +199,7 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
             "[%s] Start\n",
             Thread.currentThread().name
         )
-
+        videoSocket = videoSocketServer.accept()
         val av = AVAPIs()
         val frameInfo = ByteArray(FRAME_INFO_SIZE)
         val videoBuffer = ByteArray(VIDEO_BUF_SIZE)
@@ -256,7 +255,9 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
             }
             // Now the data is ready in videoBuffer[0 ... ret - 1]
             // Do something here
-            videoSocket.outputStream.write(videoBuffer, 0, ret)
+            videoSocket?.outputStream?.write(videoBuffer, 0, ret)
+           // udpVideoSocket.send(DatagramPacket(videoBuffer, 0, ret, videoAddr))
+
         }
 
         System.out.printf(
@@ -266,6 +267,9 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
     }
 
     companion object {
+        const val audioPort = 6666
+        const val videoPort = 6667
+        const val outputPort = 6668
         const val AUDIO_BUF_SIZE = 1024
         const val FRAME_INFO_SIZE = 16
         const val VIDEO_BUF_SIZE = 100000

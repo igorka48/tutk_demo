@@ -32,7 +32,7 @@ android {
 }
 
 dependencies {
-    implementation 'com.github.kokorin.jaffree:jaffree:2021.12.30'
+    implementation 'com.arthenica:ffmpeg-kit-full-gpl:4.5.1-1.LTS'
 
     implementation 'com.google.android.exoplayer:exoplayer-core:2.17.1'
     implementation "com.google.android.exoplayer:exoplayer:2.17.1"
