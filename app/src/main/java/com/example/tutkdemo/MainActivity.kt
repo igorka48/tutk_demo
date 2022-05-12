@@ -2,49 +2,30 @@ package com.example.tutkdemo
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.arthenica.ffmpegkit.*
-import com.example.tutkdemo.AVProvider.Companion.VIDEO_BUF_SIZE
-import com.example.tutkdemo.AVProvider.Companion.audioPort
-import com.example.tutkdemo.AVProvider.Companion.outputPort
-import com.example.tutkdemo.AVProvider.Companion.videoPort
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.analytics.PlaybackStatsListener
-import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.DataSource
-import com.google.android.exoplayer2.util.EventLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.InputStream
+import tv.danmaku.ijk.media.ijkplayerview.widget.IjkPrettyVideoView
+import tv.danmaku.ijk.media.ijkplayerview.widget.media.IjkVideoView
+import tv.danmaku.ijk.media.player.IMediaPlayer
+import tv.danmaku.ijk.media.player.IjkMediaPlayer
+import java.io.ByteArrayOutputStream
+import java.net.URL
 
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var playerView: PlayerView
-    private lateinit var player: ExoPlayer
     private lateinit var avProvider: AVProvider
+    private lateinit var mVideoView: IjkVideoView
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main)
-
-        FFmpegKitConfig.enableLogCallback {
-            //Log.d("FFmpegKitLog",  it.message)
-        }
-        FFmpegKitConfig.enableStatisticsCallback {
-           // Log.d("FFmpegKit", "Stats: $it")
-        }
-
-        playerView = findViewById(R.id.playerView)
-        player = ExoPlayer.Builder(this).build()
-        player.addAnalyticsListener( PlaybackStatsListener(false, null))
-        playerView.player = player
+        mVideoView = findViewById(R.id.playerView)
 
         avProvider = AVProvider(
             getString(R.string.deviceUID),
@@ -53,36 +34,6 @@ class MainActivity : AppCompatActivity() {
 
        avProvider.initAV()
 
-
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                FFmpegKit.executeAsync("-i tcp://127.0.0.1:${videoPort} -i tcp://127.0.0.1:${audioPort} -c:v copy -c:a aac -f mp4 -movflags frag_keyframe+empty_moov tcp://127.0.0.1:${outputPort}"
-                ) { session ->
-                    when {
-                        ReturnCode.isSuccess(session.returnCode) -> {
-                            Log.d("FFmpegKit", "SUCCESS")
-                            // SUCCESS
-                        }
-                        ReturnCode.isCancel(session.returnCode) -> {
-                            Log.d("FFmpegKit", "CANCEL")
-                            // CANCEL
-                        }
-                        else -> {
-                            // FAILURE
-                            Log.d(
-                                "FFmpegKit",
-                                String.format(
-                                    "Command failed with state %s and rc %s.%s",
-                                    session.state,
-                                    session.returnCode,
-                                    session.failStackTrace
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
 
 
@@ -97,9 +48,10 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                val client = avProvider.outSocketServer.accept()
+                //val client = avProvider.outSocketServer.accept()
                 withContext(Dispatchers.Main) {
-                    prepareExoPlayerFromInputStream(client.inputStream)
+                   // prepareExoPlayerFromInputStream(client.inputStream)
+                    playIjk(Uri.parse("tcp://127.0.0.1:6667"))
                 }
             }
         }
@@ -119,18 +71,6 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun prepareExoPlayerFromInputStream(inputStream: InputStream) {
-        val byteArrayDataSource = InputStreamDataSource(inputStream)
-        val extractorsFactory = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
-        val factory: DataSource.Factory = DataSource.Factory { byteArrayDataSource }
-        val audioSource =
-            ProgressiveMediaSource.Factory(factory, extractorsFactory).createMediaSource(
-                MediaItem.fromUri(Uri.parse("bytes:///" + "video"))
-            )
-        player.setMediaSource(audioSource)
-        player.prepare()
-        player.play()
-    }
 
     fun byteArrayToHexStr(byteArray: ByteArray): String {
         val hexArray = "0123456789ABCDEF".toCharArray()
@@ -141,5 +81,63 @@ class MainActivity : AppCompatActivity() {
             hexChars[j * 2 + 1] = hexArray[v and 0x0F]
         }
         return String(hexChars)
+    }
+
+
+    fun playIjk(uri: Uri){
+        // handle arguments
+
+        // init player
+        IjkMediaPlayer.loadLibrariesOnce(null)
+        IjkMediaPlayer.native_profileBegin(IjkMediaPlayer.IJK_LIB_NAME_FFMPEG)
+        //最大帧率 20
+        mVideoView.setRender(IjkVideoView.RENDER_TEXTURE_VIEW)
+        //打开opense,h264下有效.
+        //打开opense,h264下有效.
+      // mVideoView.isAudioHardWare = true
+//        mVideoView.setLogLevel(IjkMediaPlayer.IJK_LOG_DEBUG);
+        //set the headers properties in user-agent.
+        //        mVideoView.setLogLevel(IjkMediaPlayer.IJK_LOG_DEBUG);
+        //set the headers properties in user-agent.
+     //   mVideoView.userAgentStr = "Android_Station_V1.1.1"
+        //设置h265
+        //  if(mVideoPath.startsWith("rtsp")){
+        //设置h265
+        //  if(mVideoPath.startsWith("rtsp")){
+        mVideoView.isH265 = true
+      //  mVideoView.openZeroVideoDelay(true)
+//        }else{
+//            //打开视频0延迟.
+//            mVideoView.openZeroVideoDelay(true);
+//        }
+        // prefer mVideoPath
+        //        }else{
+//            //打开视频0延迟.
+//            mVideoView.openZeroVideoDelay(true);
+//        }
+        // prefer mVideoPath
+        Log.d("URI", "URI:$uri")
+        mVideoView.setVideoURI(uri, IjkVideoView.IJK_TYPE_HTTP_PLAY)
+        //mVideoView.set
+
+        //准备就绪，做一些配置操作，比如音视频同步方式.
+
+        //准备就绪，做一些配置操作，比如音视频同步方式.
+        mVideoView.setOnPreparedListener(IMediaPlayer.OnPreparedListener {
+            Log.e("TAG", "onPrepared#done! ")
+            mVideoView.openZeroVideoDelay(true)
+        })
+        mVideoView.setOnInfoListener(IMediaPlayer.OnInfoListener { mp, what, extra ->
+            Log.e(
+                "TAG",
+                "onInfo#position: " + mp.currentPosition + " what: " + what + " extra: " + extra
+            )
+//            if (IjkMediaPlayer.MP_STATE_PREPARED == what) {
+//                val takeTime: Long = SystemClock.currentThreadTimeMillis() - mLastStartTime
+//                Log.i("poe", "加载视频prepare耗时#=====================> $takeTime ms")
+//                // DO: 2020/3/31 真正的准备完成了，准备播放 ，回调到外面通知状态改变！。
+//            }
+            false
+        })
     }
 }
