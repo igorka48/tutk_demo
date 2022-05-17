@@ -6,7 +6,7 @@ import kotlinx.coroutines.*
 import java.net.*
 
 
-class AVProvider(private val uid: String, private val licenceKay: String) {
+class AVProvider {
 
     private val defaultErrorHandler = CoroutineExceptionHandler { _, exception ->
         Log.e("", "${this.javaClass.name} got $exception")
@@ -29,7 +29,7 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
     private var videoSocket: Socket? = null
     private var audioSocket: Socket? = null
 
-    fun initAV() = defaultScope.launch {
+    fun initAV(uid: String, licenceKay: String) = defaultScope.launch {
         println("StreamClient start...")
 
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
@@ -266,6 +266,7 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
         )
     }
 
+
     companion object {
         const val audioPort = 6666
         const val videoPort = 6667
@@ -274,7 +275,6 @@ class AVProvider(private val uid: String, private val licenceKay: String) {
         const val FRAME_INFO_SIZE = 16
         const val VIDEO_BUF_SIZE = 100000
         val localhost = byteArrayOf(127, 0, 0, 1)
-
     }
 
 

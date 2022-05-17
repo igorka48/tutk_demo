@@ -25,15 +25,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        with(binding){
+        with(binding) {
             scanUIDButton.setOnClickListener { requestCameraPermissionAndStartScanner() }
             exoPlayerButton.setOnClickListener { openExoPlayer() }
             ijkPlayerButton.setOnClickListener { openIjkPlayer() }
-            uidEditText.setText(getSharedPreferences(SETTINGS_FILE_NAME, MODE_PRIVATE).getString(UID_KEY, UID_DEFAULT_VALUE))
+            uidEditText.setText(
+                getSharedPreferences(SETTINGS_FILE_NAME, MODE_PRIVATE).getString(
+                    UID_KEY,
+                    UID_DEFAULT_VALUE
+                )
+            )
         }
     }
 
-    private fun requestCameraPermissionAndStartScanner(){
+    private fun requestCameraPermissionAndStartScanner() {
         when {
             ContextCompat.checkSelfPermission(
                 this,
@@ -50,27 +55,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        with(binding){
-            uidEditText.setText(getSharedPreferences(SETTINGS_FILE_NAME, MODE_PRIVATE).getString(UID_KEY, UID_DEFAULT_VALUE))
+        with(binding) {
+            uidEditText.setText(
+                getSharedPreferences(SETTINGS_FILE_NAME, MODE_PRIVATE).getString(
+                    UID_KEY,
+                    UID_DEFAULT_VALUE
+                )
+            )
         }
     }
 
-    private fun scanUID(){
+    private fun scanUID() {
         startActivity(Intent(this, ScannerActivity::class.java))
     }
-    private fun openExoPlayer(){
+
+    private fun openExoPlayer() {
         initAVProvider()
         startActivity(Intent(this, ExoActivity::class.java))
     }
-    private fun openIjkPlayer(){
+
+    private fun openIjkPlayer() {
         initAVProvider()
         startActivity(Intent(this, IjkActivity::class.java))
     }
-    private fun initAVProvider(){
 
+    private fun initAVProvider() {
+        val avProvider = (applicationContext as TUTKDemoApplication).avProvider
+        avProvider.initAV(
+            uid = binding.uidEditText.text.toString(),
+            licenceKay = getString(R.string.licenseKey)
+        )
     }
 
-    companion object{
+    companion object {
         const val SETTINGS_FILE_NAME = "settings"
         const val UID_KEY = "UID"
         const val UID_DEFAULT_VALUE = ""

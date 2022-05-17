@@ -23,15 +23,6 @@ class IjkActivity : AppCompatActivity() {
         setContentView(R.layout.activity_ijk)
         mVideoView = findViewById(R.id.playerView)
 
-        avProvider = AVProvider(
-            getString(R.string.deviceUID),
-            getString(R.string.licenseKey)
-        )
-
-       avProvider.initAV()
-
-
-
 
 //        lifecycleScope.launch {
 //            withContext(Dispatchers.IO) {

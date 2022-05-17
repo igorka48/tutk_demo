@@ -3,13 +3,15 @@
     package="com.example.tutkdemo">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="false"/>
+        android:required="false" />
 
-    <application android:label="@string/app_name">
+    <application
+        android:name=".TUTKDemoApplication"
+        android:label="@string/app_name">
         <activity
             android:name=".MainActivity"
             android:exported="true">

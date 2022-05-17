@@ -44,13 +44,6 @@ class ExoActivity : AppCompatActivity() {
         player.addAnalyticsListener( PlaybackStatsListener(false, null))
         playerView.player = player
 
-        avProvider = AVProvider(
-            getString(R.string.deviceUID),
-            getString(R.string.licenseKey)
-        )
-
-       avProvider.initAV()
-
 
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
