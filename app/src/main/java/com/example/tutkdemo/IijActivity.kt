@@ -17,7 +17,7 @@ import java.io.ByteArrayOutputStream
 import java.net.URL
 
 
-class MainActivity : AppCompatActivity() {
+class IijActivity : AppCompatActivity() {
 
     private lateinit var avProvider: AVProvider
     private lateinit var mVideoView: IjkVideoView
