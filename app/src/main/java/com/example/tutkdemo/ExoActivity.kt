@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.arthenica.ffmpegkit.*
-import com.example.tutkdemo.AVProvider.Companion.VIDEO_BUF_SIZE
 import com.example.tutkdemo.AVProvider.Companion.audioPort
 import com.example.tutkdemo.AVProvider.Companion.outputPort
 import com.example.tutkdemo.AVProvider.Companion.videoPort
@@ -17,7 +16,6 @@ import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DataSource
-import com.google.android.exoplayer2.util.EventLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,7 +30,7 @@ class ExoActivity : AppCompatActivity() {
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.main)
+        setContentView(R.layout.activity_ijk)
 
         FFmpegKitConfig.enableLogCallback {
             //Log.d("FFmpegKitLog",  it.message)

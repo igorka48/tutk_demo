@@ -2,29 +2,25 @@ package com.example.tutkdemo
 
 import android.net.Uri
 import android.os.Bundle
-import android.os.SystemClock
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import tv.danmaku.ijk.media.ijkplayerview.widget.IjkPrettyVideoView
 import tv.danmaku.ijk.media.ijkplayerview.widget.media.IjkVideoView
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
-import java.io.ByteArrayOutputStream
-import java.net.URL
 
 
-class IijActivity : AppCompatActivity() {
+class IjkActivity : AppCompatActivity() {
 
     private lateinit var avProvider: AVProvider
     private lateinit var mVideoView: IjkVideoView
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.main)
+        setContentView(R.layout.activity_ijk)
         mVideoView = findViewById(R.id.playerView)
 
         avProvider = AVProvider(
