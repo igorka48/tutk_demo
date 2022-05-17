@@ -17,7 +17,7 @@ class AVProvider {
     private val audioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO) + defaultErrorHandler
 
 
-    var localhostAddr = InetAddress.getByAddress(localhost)
+    var localhostAddr = InetAddress.getByAddress(localhostBytes)
     var audioAddr: SocketAddress = InetSocketAddress(localhostAddr, audioPort)
     var videoAddr: SocketAddress = InetSocketAddress(localhostAddr, videoPort)
 
@@ -271,10 +271,11 @@ class AVProvider {
         const val audioPort = 6666
         const val videoPort = 6667
         const val outputPort = 6668
+        const val localhost = "127.0.0.1"
         const val AUDIO_BUF_SIZE = 1024
         const val FRAME_INFO_SIZE = 16
         const val VIDEO_BUF_SIZE = 100000
-        val localhost = byteArrayOf(127, 0, 0, 1)
+        val localhostBytes = byteArrayOf(127, 0, 0, 1)
     }
 
 

@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         const val SETTINGS_FILE_NAME = "settings"
         const val UID_KEY = "UID"
         const val UID_DEFAULT_VALUE = ""
+        const val FULLSCREEN_KEY = "fullscreen"
     }
 
 }

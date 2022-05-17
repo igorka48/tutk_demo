@@ -20,8 +20,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".IjkActivity" />
-        <activity android:name=".ExoActivity" />
+        <activity
+            android:name=".IjkActivity"
+            android:theme="@style/Theme.Design.NoActionBar" />
+        <activity
+            android:name=".ExoActivity"
+            android:theme="@style/Theme.Design.NoActionBar" />
         <activity android:name=".ScannerActivity" />
     </application>
 
