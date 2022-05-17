@@ -32,6 +32,11 @@ android {
 }
 
 dependencies {
+    implementation 'com.arthenica:ffmpeg-kit-full-gpl:4.5.1-1.LTS'
+
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.17.1'
+    implementation "com.google.android.exoplayer:exoplayer:2.17.1"
+
     implementation 'io.github.jdpxiaoming:ijkplayer-view:0.0.26'
     implementation 'io.github.jdpxiaoming:ijkplayer-java:0.0.26'
     implementation 'io.github.jdpxiaoming:ijkplayer-armv7a:0.0.26'
@@ -39,7 +44,7 @@ dependencies {
     implementation 'io.github.jdpxiaoming:ijkplayer-arm64:0.0.26'
 
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1-native-mt'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
 
     implementation 'androidx.core:core-ktx:1.7.0'
