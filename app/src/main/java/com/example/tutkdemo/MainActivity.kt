@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -35,6 +36,16 @@ class MainActivity : AppCompatActivity() {
                     UID_DEFAULT_VALUE
                 )
             )
+            uidEditText.setOnEditorActionListener(TextView.OnEditorActionListener { textView, i, keyEvent ->
+                val settings =
+                    getSharedPreferences(SETTINGS_FILE_NAME, MODE_PRIVATE).edit()
+                settings.putString(
+                    UID_KEY,
+                    textView.text.toString()
+                )
+                settings.apply()
+                return@OnEditorActionListener false
+            })
         }
     }
 
@@ -85,6 +96,16 @@ class MainActivity : AppCompatActivity() {
             uid = binding.uidEditText.text.toString(),
             licenceKay = getString(R.string.licenseKey)
         )
+    }
+
+    private fun stopAVProvider(){
+        val avProvider = (applicationContext as TUTKDemoApplication).avProvider
+        avProvider.deinit()
+    }
+
+    override fun onDestroy() {
+        stopAVProvider()
+        super.onDestroy()
     }
 
     companion object {

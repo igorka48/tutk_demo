@@ -25,10 +25,14 @@ class IjkActivity : AppCompatActivity() {
     private lateinit var binding: ActivityIjkBinding
     private lateinit var players: List<IjkVideoView>
     private var isInFullscreen = false
+    private lateinit var avProvider: AVProvider
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("TAG", "onCreate")
+
         isInFullscreen = savedInstanceState?.getBoolean(FULLSCREEN_KEY) ?: false
+        avProvider = (applicationContext as TUTKDemoApplication).avProvider
 
         binding = ActivityIjkBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -184,4 +188,20 @@ class IjkActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        Log.d("TAG", "onStop")
+        players.forEach {
+            it.stopPlayback()
+            it.release(true)
+            it.stopBackgroundPlay()
+        }
+        IjkMediaPlayer.native_profileEnd()
+        avProvider.stopVideo()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        avProvider.startVideo()
+    }
 }

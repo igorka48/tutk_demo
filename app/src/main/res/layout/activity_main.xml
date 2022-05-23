@@ -15,6 +15,7 @@
         android:layout_marginEnd="@dimen/default_padding"
         android:inputType="textCapCharacters"
         android:text="UID"
+        android:imeOptions="actionGo"
         app:layout_constraintEnd_toStartOf="@+id/scanUIDButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

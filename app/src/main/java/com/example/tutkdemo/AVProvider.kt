@@ -29,9 +29,11 @@ class AVProvider {
     private var videoSocket: Socket? = null
     private var audioSocket: Socket? = null
 
+    private var isRunning = false
+
     fun initAV(uid: String, licenceKay: String) = defaultScope.launch {
         println("StreamClient start...")
-
+        isRunning = true
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
         System.out.printf("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
         if (ret != TUTKGlobalAPIs.TUTK_ER_NoERROR) {
@@ -126,7 +128,6 @@ class AVProvider {
     }
 
     private suspend fun readAudio(avIndex: Int) {
-        audioSocket = audioSocketServer.accept()
         System.out.printf(
             "[%s] Start\n",
             Thread.currentThread().name
@@ -135,7 +136,7 @@ class AVProvider {
         val av = AVAPIs()
         val frameInfo = ByteArray(FRAME_INFO_SIZE)
         val audioBuffer = ByteArray(AUDIO_BUF_SIZE)
-        while (true) {
+        while (isRunning) {
             var ret = AVAPIs.avCheckAudioBuf(avIndex)
             if (ret < 0) {
                 // Same error codes as below
@@ -199,14 +200,13 @@ class AVProvider {
             "[%s] Start\n",
             Thread.currentThread().name
         )
-        videoSocket = videoSocketServer.accept()
         val av = AVAPIs()
         val frameInfo = ByteArray(FRAME_INFO_SIZE)
         val videoBuffer = ByteArray(VIDEO_BUF_SIZE)
         val outBufSize = IntArray(1)
         val outFrameSize = IntArray(1)
         val outFrmInfoBufSize = IntArray(1)
-        while (true) {
+        while (isRunning) {
             val frameNumber = IntArray(1)
             val ret = AVAPIs.avRecvFrameData2(
                 avIndex, videoBuffer,
@@ -256,14 +256,43 @@ class AVProvider {
             // Now the data is ready in videoBuffer[0 ... ret - 1]
             // Do something here
             videoSocket?.outputStream?.write(videoBuffer, 0, ret)
+            Log.d("AVProvider", "video buffer sent. size: $ret")
            // udpVideoSocket.send(DatagramPacket(videoBuffer, 0, ret, videoAddr))
-
         }
 
         System.out.printf(
             "[%s] Exit\n",
             Thread.currentThread().name
         )
+    }
+
+    fun startVideo(){
+        defaultScope.launch {
+            videoSocket = videoSocketServer.accept()
+            audioSocket = audioSocketServer.accept()
+        }
+    }
+    fun stopVideo(){
+        defaultScope.launch {
+            try {
+                videoSocket?.close()
+            } catch (e: Exception) {
+
+            } finally {
+                videoSocket = null
+            }
+            try {
+                audioSocket?.close()
+            } catch (e: Exception) {
+
+            } finally {
+                audioSocket = null
+            }
+        }
+    }
+
+    fun deinit() {
+        isRunning = false
     }
 
 

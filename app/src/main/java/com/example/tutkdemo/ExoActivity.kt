@@ -1,20 +1,24 @@
 package com.example.tutkdemo
 
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.arthenica.ffmpegkit.*
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.arthenica.ffmpegkit.ReturnCode
 import com.example.tutkdemo.AVProvider.Companion.audioPort
 import com.example.tutkdemo.AVProvider.Companion.outputPort
 import com.example.tutkdemo.AVProvider.Companion.videoPort
+import com.example.tutkdemo.databinding.ActivityExoBinding
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.analytics.PlaybackStatsListener
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,13 +28,18 @@ import java.io.InputStream
 
 class ExoActivity : AppCompatActivity() {
 
-    private lateinit var playerView: PlayerView
-    private lateinit var player: ExoPlayer
+    private lateinit var binding: ActivityExoBinding
+    private var player: ExoPlayer? = null
     private lateinit var avProvider: AVProvider
+    private var isInFullscreen = false
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_exo)
+        isInFullscreen = savedInstanceState?.getBoolean(MainActivity.FULLSCREEN_KEY) ?: false
+
+        binding = ActivityExoBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         avProvider = (applicationContext as TUTKDemoApplication).avProvider
         FFmpegKitConfig.enableLogCallback {
             //Log.d("FFmpegKitLog",  it.message)
@@ -38,11 +47,13 @@ class ExoActivity : AppCompatActivity() {
         FFmpegKitConfig.enableStatisticsCallback {
            // Log.d("FFmpegKit", "Stats: $it")
         }
-
-        playerView = findViewById(R.id.playerView)
         player = ExoPlayer.Builder(this).build()
-        player.addAnalyticsListener( PlaybackStatsListener(false, null))
-        playerView.player = player
+        player?.addAnalyticsListener( PlaybackStatsListener(false, null))
+
+        with(binding) {
+            modeButton.setOnClickListener { changeMode() }
+            playerView.player = player
+        }
 
 
         lifecycleScope.launch {
@@ -92,6 +103,7 @@ class ExoActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     prepareExoPlayerFromInputStream(client.inputStream)
                 }
+
             }
         }
 
@@ -118,9 +130,52 @@ class ExoActivity : AppCompatActivity() {
             ProgressiveMediaSource.Factory(factory, extractorsFactory).createMediaSource(
                 MediaItem.fromUri(Uri.parse("bytes:///" + "video"))
             )
-        player.setMediaSource(audioSource)
-        player.prepare()
-        player.play()
+        player?.setMediaSource(audioSource)
+        player?.prepare()
+        player?.play()
+    }
+
+
+    private fun changeMode() {
+        if (isInFullscreen) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION)
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
+        isInFullscreen = !isInFullscreen
+    }
+
+    override fun onDestroy() {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        releasePlayer()
+        super.onDestroy()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        player?.playWhenReady = false
+        player?.stop()
+        player?.clearMediaItems()
+        avProvider.stopVideo()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d("Tag", "VideoPlayer. onResume")
+        player?.playWhenReady = true
+        avProvider.startVideo()
+    }
+
+
+    private fun releasePlayer() {
+        Log.d("Tag","VideoPlayer. releasePlayer")
+        player?.playWhenReady = false
+        player?.release()
+        player = null
     }
 
 }
