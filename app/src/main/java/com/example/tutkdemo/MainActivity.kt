@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         with(binding) {
+            buildTimeLabel.text = BuildConfig.BUILD_TIME
             scanUIDButton.setOnClickListener { requestCameraPermissionAndStartScanner() }
             exoPlayerButton.setOnClickListener { openExoPlayer() }
             ijkPlayerButton.setOnClickListener { openIjkPlayer() }
