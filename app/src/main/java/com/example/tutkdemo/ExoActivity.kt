@@ -45,10 +45,10 @@ class ExoActivity : AppCompatActivity() {
             //Log.d("FFmpegKitLog",  it.message)
         }
         FFmpegKitConfig.enableStatisticsCallback {
-           // Log.d("FFmpegKit", "Stats: $it")
+            // Log.d("FFmpegKit", "Stats: $it")
         }
         player = ExoPlayer.Builder(this).build()
-        player?.addAnalyticsListener( PlaybackStatsListener(false, null))
+        player?.addAnalyticsListener(PlaybackStatsListener(false, null))
 
         with(binding) {
             modeButton.setOnClickListener { changeMode() }
@@ -56,36 +56,35 @@ class ExoActivity : AppCompatActivity() {
         }
 
 
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                FFmpegKit.executeAsync("-i tcp://127.0.0.1:${videoPort} -i tcp://127.0.0.1:${audioPort} -c:v copy -c:a aac -f mp4 -movflags frag_keyframe+empty_moov tcp://127.0.0.1:${outputPort}"
-                ) { session ->
-                    when {
-                        ReturnCode.isSuccess(session.returnCode) -> {
-                            Log.d("FFmpegKit", "SUCCESS")
-                            // SUCCESS
-                        }
-                        ReturnCode.isCancel(session.returnCode) -> {
-                            Log.d("FFmpegKit", "CANCEL")
-                            // CANCEL
-                        }
-                        else -> {
-                            // FAILURE
-                            Log.d(
-                                "FFmpegKit",
-                                String.format(
-                                    "Command failed with state %s and rc %s.%s",
-                                    session.state,
-                                    session.returnCode,
-                                    session.failStackTrace
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
+//        lifecycleScope.launch {
+//            withContext(Dispatchers.IO) {
+//                FFmpegKit.executeAsync("-i tcp://127.0.0.1:${videoPort} -i tcp://127.0.0.1:${audioPort} -c:v copy -c:a aac -f mp4 -movflags frag_keyframe+empty_moov tcp://127.0.0.1:${outputPort}"
+//                ) { session ->
+//                    when {
+//                        ReturnCode.isSuccess(session.returnCode) -> {
+//                            Log.d("FFmpegKit", "SUCCESS")
+//                            // SUCCESS
+//                        }
+//                        ReturnCode.isCancel(session.returnCode) -> {
+//                            Log.d("FFmpegKit", "CANCEL")
+//                            // CANCEL
+//                        }
+//                        else -> {
+//                            // FAILURE
+//                            Log.d(
+//                                "FFmpegKit",
+//                                String.format(
+//                                    "Command failed with state %s and rc %s.%s",
+//                                    session.state,
+//                                    session.returnCode,
+//                                    session.failStackTrace
+//                                )
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//        }
 
 
 //        lifecycleScope.launch {
@@ -97,15 +96,15 @@ class ExoActivity : AppCompatActivity() {
 //            }
 //        }
 
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val client = avProvider.outSocketServer.accept()
-                withContext(Dispatchers.Main) {
-                    prepareExoPlayerFromInputStream(client.inputStream)
-                }
-
-            }
-        }
+//        lifecycleScope.launch {
+//            withContext(Dispatchers.IO) {
+//                val client = avProvider.outSocketServer.accept()
+//                withContext(Dispatchers.Main) {
+//                    prepareExoPlayerFromInputStream(client.inputStream)
+//                }
+//
+//            }
+//        }
 
 
 //        lifecycleScope.launch{
@@ -168,11 +167,11 @@ class ExoActivity : AppCompatActivity() {
         Log.d("Tag", "VideoPlayer. onResume")
         player?.playWhenReady = true
         avProvider.startVideo()
+
     }
 
-
     private fun releasePlayer() {
-        Log.d("Tag","VideoPlayer. releasePlayer")
+        Log.d("Tag", "VideoPlayer. releasePlayer")
         player?.playWhenReady = false
         player?.release()
         player = null

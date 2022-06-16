@@ -42,16 +42,6 @@
         app:use_controller="false" />
 
     <Button
-        android:id="@+id/playStopButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/default_padding"
-        android:layout_marginBottom="@dimen/default_padding"
-        android:text="Play/Stop"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/modeButton" />
-
-    <Button
         android:id="@+id/modeButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

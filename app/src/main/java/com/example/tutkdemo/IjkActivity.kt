@@ -3,7 +3,6 @@ package com.example.tutkdemo
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,12 +11,13 @@ import com.example.tutkdemo.AVProvider.Companion.localhost
 import com.example.tutkdemo.AVProvider.Companion.videoPort
 import com.example.tutkdemo.MainActivity.Companion.FULLSCREEN_KEY
 import com.example.tutkdemo.databinding.ActivityIjkBinding
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import timber.log.Timber
 import tv.danmaku.ijk.media.ijkplayerview.widget.media.IjkVideoView
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
+import kotlin.coroutines.coroutineContext
 
 
 class IjkActivity : AppCompatActivity() {
@@ -29,7 +29,7 @@ class IjkActivity : AppCompatActivity() {
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("TAG", "onCreate")
+        Timber.d("onCreate")
 
         isInFullscreen = savedInstanceState?.getBoolean(FULLSCREEN_KEY) ?: false
         avProvider = (applicationContext as TUTKDemoApplication).avProvider
@@ -42,46 +42,6 @@ class IjkActivity : AppCompatActivity() {
             players = listOf(audioPlayerView, videoPlayerView)
             modeButton.setOnClickListener { changeMode() }
         }
-
-//        lifecycleScope.launch {
-//            withContext(Dispatchers.IO) {
-//                val client = avProvider.audioSocketServer.accept()
-//                withContext(Dispatchers.Main) {
-//                    prepareExoPlayerFromInputStream(client.inputStream)
-//                }
-//            }
-//        }
-
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                //val client = avProvider.outSocketServer.accept()
-                withContext(Dispatchers.Main) {
-                    // prepareExoPlayerFromInputStream(client.inputStream)
-                    playVideo(Uri.parse("tcp://$localhost:$videoPort"))
-                }
-            }
-        }
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                //val client = avProvider.outSocketServer.accept()
-                withContext(Dispatchers.Main) {
-                    // prepareExoPlayerFromInputStream(client.inputStream)
-                    playAudio(Uri.parse("tcp://$localhost:$audioPort"))
-                }
-            }
-        }
-
-
-//        lifecycleScope.launch{
-//            withContext(Dispatchers.IO){
-//                val client = avProvider.outSocketServer.accept()
-//                val buffer = ByteArray(VIDEO_BUF_SIZE)
-//                while (true){
-//                    client.inputStream.read(buffer, 0, buffer.size)
-//                    Log.d("Video", byteArrayToHexStr(buffer))
-//                }
-//            }
-//        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -89,11 +49,6 @@ class IjkActivity : AppCompatActivity() {
         outState.putBoolean("fullscreen", isInFullscreen)
     }
 
-    private fun playStop() {
-        players.forEach {
-            it.stopPlayback()
-        }
-    }
 
     private fun changeMode() {
         if (isInFullscreen) {
@@ -113,17 +68,14 @@ class IjkActivity : AppCompatActivity() {
         with(binding) {
             IjkMediaPlayer.loadLibrariesOnce(null)
             IjkMediaPlayer.native_profileBegin(IjkMediaPlayer.IJK_LIB_NAME_FFMPEG)
-            Log.d("URI", "Audio URI:$uri")
-            audioPlayerView.setVideoURI(uri, IjkVideoView.IJK_TYPE_HTTP_PLAY)
+            Timber.d("Audio URI:" + uri)
+            audioPlayerView.setVideoURI(uri, IjkVideoView.IJK_TYPE_LIVING_LOW_DELAY)
             audioPlayerView.setOnPreparedListener {
-                Log.e("TAG", "onPrepared#done! ")
+                Timber.e("onPrepared#done! ")
                 audioPlayerView.openZeroVideoDelay(true)
             }
             audioPlayerView.setOnInfoListener { mp, what, extra ->
-                Log.e(
-                    "TAG",
-                    "onInfo#position: " + mp.currentPosition + " what: " + what + " extra: " + extra
-                )
+                Timber.e("onInfo#position: " + mp.currentPosition + " what: " + what + " extra: " + extra)
                 false
             }
         }
@@ -162,22 +114,19 @@ class IjkActivity : AppCompatActivity() {
 //            mVideoView.openZeroVideoDelay(true);
 //        }
             // prefer mVideoPath
-            Log.d("URI", "URI:$uri")
-            videoPlayerView.setVideoURI(uri, IjkVideoView.IJK_TYPE_HTTP_PLAY)
+            Timber.d("URI:$uri")
+            videoPlayerView.setVideoURI(uri, IjkVideoView.IJK_TYPE_LIVING_LOW_DELAY)
             //mVideoView.set
 
             //准备就绪，做一些配置操作，比如音视频同步方式.
 
             //准备就绪，做一些配置操作，比如音视频同步方式.
             videoPlayerView.setOnPreparedListener(IMediaPlayer.OnPreparedListener {
-                Log.e("TAG", "onPrepared#done! ")
+                Timber.e("onPrepared#done! ")
                 videoPlayerView.openZeroVideoDelay(true)
             })
             videoPlayerView.setOnInfoListener(IMediaPlayer.OnInfoListener { mp, what, extra ->
-                Log.e(
-                    "TAG",
-                    "onInfo#position: " + mp.currentPosition + " what: " + what + " extra: " + extra
-                )
+                Timber.e("onInfo#position: " + mp.currentPosition + " what: " + what + " extra: " + extra)
 //            if (IjkMediaPlayer.MP_STATE_PREPARED == what) {
 //                val takeTime: Long = SystemClock.currentThreadTimeMillis() - mLastStartTime
 //                Log.i("poe", "加载视频prepare耗时#=====================> $takeTime ms")
@@ -189,19 +138,25 @@ class IjkActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        super.onStop()
-        Log.d("TAG", "onStop")
+        Timber.d("ActivityLifecycle onStop")
+        avProvider.stopVideo()
         players.forEach {
             it.stopPlayback()
             it.release(true)
             it.stopBackgroundPlay()
         }
         IjkMediaPlayer.native_profileEnd()
-        avProvider.stopVideo()
+        super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        Timber.d("ActivityLifecycle onResume")
         avProvider.startVideo()
+        lifecycleScope.launch {
+            delay(300)
+            playVideo(Uri.parse("tcp://$localhost:$videoPort"))
+            playAudio(Uri.parse("tcp://$localhost:$audioPort"))
+        }
     }
 }

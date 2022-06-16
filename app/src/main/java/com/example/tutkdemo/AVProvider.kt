@@ -1,15 +1,16 @@
 package com.example.tutkdemo
 
-import android.util.Log
 import com.tutk.IOTC.*
 import kotlinx.coroutines.*
+import timber.log.Timber
 import java.net.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 class AVProvider {
 
     private val defaultErrorHandler = CoroutineExceptionHandler { _, exception ->
-        Log.e("", "${this.javaClass.name} got $exception")
+        Timber.e("${this.javaClass.name} got $exception")
     }
     private val defaultScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO) + defaultErrorHandler
@@ -22,89 +23,32 @@ class AVProvider {
     var videoAddr: SocketAddress = InetSocketAddress(localhostAddr, videoPort)
 
 
-    private val audioSocketServer = ServerSocket(audioPort)
-    private val videoSocketServer = ServerSocket(videoPort)
+    private var audioSocketServer: ServerSocket? = null
+    private var videoSocketServer: ServerSocket? = null
     val outSocketServer = ServerSocket(outputPort)
 
     private var videoSocket: Socket? = null
     private var audioSocket: Socket? = null
 
-    private var isRunning = false
+    private var isRunning: AtomicBoolean = AtomicBoolean(false)
+
+
+    val av_client_in_config = St_AVClientStartInConfig()
+    val av_client_out_config = St_AVClientStartOutConfig()
+    var avIndex = 0
+    var sid = 0
+    var UID = ""
 
     fun initAV(uid: String, licenceKay: String) = defaultScope.launch {
-        println("StreamClient start...")
-        isRunning = true
+        Timber.d("AVProviderLifecycle initAV")
+        isRunning.set(true)
+        UID = uid
         var ret = TUTKGlobalAPIs.TUTK_SDK_Set_License_Key(licenceKay)
-        System.out.printf("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
+        Timber.d("TUTK_SDK_Set_License_Key() ret = %d\n", ret)
         if (ret != TUTKGlobalAPIs.TUTK_ER_NoERROR) {
-            System.out.printf("TUTK_SDK_Set_License_Key exit...!!\n")
+            Timber.d("TUTK_SDK_Set_License_Key exit...!!\n")
             return@launch
         }
-
-        ret = IOTCAPIs.IOTC_Initialize2(0)
-        System.out.printf("IOTC_Initialize2() ret = %d\n", ret)
-        if (ret != IOTCAPIs.IOTC_ER_NoERROR) {
-            System.out.printf("IOTCAPIs_Device exit...!!\n")
-            return@launch
-        }
-
-        // alloc 3 sessions for video and two-way audio
-
-        // alloc 3 sessions for video and two-way audio
-        AVAPIs.avInitialize(3)
-
-        val sid = IOTCAPIs.IOTC_Get_SessionID()
-        if (sid < 0) {
-            System.out.printf("IOTC_Get_SessionID error code [%d]\n", sid)
-            return@launch
-        }
-        ret = IOTCAPIs.IOTC_Connect_ByUID_Parallel(uid, sid)
-        System.out.printf("Step 2: call IOTC_Connect_ByUID_Parallel(%s).......\n", uid)
-
-        var srvType = 0
-        var bResend = 0
-        var avIndex = 0
-        val av_client_in_config = St_AVClientStartInConfig()
-        val av_client_out_config = St_AVClientStartOutConfig()
-
-        av_client_in_config.iotc_session_id = sid
-        av_client_in_config.iotc_channel_id = 0
-        av_client_in_config.timeout_sec = 20
-        av_client_in_config.account_or_identity = "admin"
-        av_client_in_config.password_or_token = "888888"
-        av_client_in_config.resend = 1
-        av_client_in_config.security_mode = 0 //enable DTLS
-
-        av_client_in_config.auth_type = 0
-
-        avIndex = AVAPIs.avClientStartEx(av_client_in_config, av_client_out_config)
-        bResend = av_client_out_config.resend
-        srvType = av_client_out_config.server_type
-        System.out.printf("Step 2: call avClientStartEx(%d).......\n", avIndex)
-
-        if (avIndex < 0) {
-            System.out.printf("avClientStartEx failed[%d]\n", avIndex)
-            return@launch
-        }
-
-        if (startIpcamStream(avIndex)) {
-            Log.d("Tag", "index + $avIndex")
-            val deferred = async {
-                readAudio(avIndex)
-            }
-            val deferred2 = async {
-                readVideo(avIndex)
-            }
-            awaitAll(deferred, deferred2)
-        }
-
-        AVAPIs.avClientStop(avIndex)
-        System.out.printf("avClientStop OK\n")
-        IOTCAPIs.IOTC_Session_Close(sid)
-        System.out.printf("IOTC_Session_Close OK\n")
-        AVAPIs.avDeInitialize()
-        IOTCAPIs.IOTC_DeInitialize()
-        System.out.printf("StreamClient exit...\n")
     }
 
     private fun startIpcamStream(avIndex: Int): Boolean {
@@ -115,20 +59,20 @@ class AVProvider {
         val IOTYPE_USER_IPCAM_START = 0x1FF
         var ret = AVAPIs.avSendIOCtrl(avIndex, IOTYPE_USER_IPCAM_START, ByteArray(8), 8)
         if (ret < 0) {
-            System.out.printf("start_ipcam_stream failed[%d]\n", ret)
+            Timber.d("start_ipcam_stream failed[%d]\n", ret)
             return false
         }
         val IOTYPE_USER_IPCAM_AUDIOSTART = 0x300
         ret = AVAPIs.avSendIOCtrl(avIndex, IOTYPE_USER_IPCAM_AUDIOSTART, ByteArray(8), 8)
         if (ret < 0) {
-            System.out.printf("start_ipcam_stream failed[%d]\n", ret)
+            Timber.d("start_ipcam_stream failed[%d]\n", ret)
             return false
         }
         return true
     }
 
-    private suspend fun readAudio(avIndex: Int) {
-        System.out.printf(
+    private fun readAudio(avIndex: Int) {
+        Timber.d(
             "[%s] Start\n",
             Thread.currentThread().name
         )
@@ -136,11 +80,11 @@ class AVProvider {
         val av = AVAPIs()
         val frameInfo = ByteArray(FRAME_INFO_SIZE)
         val audioBuffer = ByteArray(AUDIO_BUF_SIZE)
-        while (isRunning) {
+        while (isRunning.get()) {
             var ret = AVAPIs.avCheckAudioBuf(avIndex)
             if (ret < 0) {
                 // Same error codes as below
-                System.out.printf(
+                Timber.d(
                     "[%s] avCheckAudioBuf() failed: %d\n",
                     Thread.currentThread().name, ret
                 )
@@ -161,25 +105,25 @@ class AVProvider {
                 frameNumber
             )
             if (ret == AVAPIs.AV_ER_SESSION_CLOSE_BY_REMOTE) {
-                System.out.printf(
+                Timber.d(
                     "[%s] AV_ER_SESSION_CLOSE_BY_REMOTE\n",
                     Thread.currentThread().name
                 )
                 break
             } else if (ret == AVAPIs.AV_ER_REMOTE_TIMEOUT_DISCONNECT) {
-                System.out.printf(
+                Timber.d(
                     "[%s] AV_ER_REMOTE_TIMEOUT_DISCONNECT\n",
                     Thread.currentThread().name
                 )
                 break
             } else if (ret == AVAPIs.AV_ER_INVALID_SID) {
-                System.out.printf(
+                Timber.d(
                     "[%s] Session cant be used anymore\n",
                     Thread.currentThread().name
                 )
                 break
             } else if (ret == AVAPIs.AV_ER_LOSED_THIS_FRAME) {
-                //System.out.printf("[%s] Audio frame losed\n",
+                //Timber.d("[%s] Audio frame losed\n",
                 //        Thread.currentThread().getName());
                 continue
             }
@@ -189,14 +133,14 @@ class AVProvider {
             // Do something here
         }
 
-        System.out.printf(
-            "[%s] Exit\n",
+        Timber.d(
+            "[%s] Exit audio reader",
             Thread.currentThread().name
         )
     }
 
-    private suspend fun readVideo(avIndex: Int) {
-        System.out.printf(
+    private fun readVideo(avIndex: Int) {
+        Timber.d(
             "[%s] Start\n",
             Thread.currentThread().name
         )
@@ -206,7 +150,7 @@ class AVProvider {
         val outBufSize = IntArray(1)
         val outFrameSize = IntArray(1)
         val outFrmInfoBufSize = IntArray(1)
-        while (isRunning) {
+        while (isRunning.get()) {
             val frameNumber = IntArray(1)
             val ret = AVAPIs.avRecvFrameData2(
                 avIndex, videoBuffer,
@@ -223,31 +167,31 @@ class AVProvider {
                     break
                 }
             } else if (ret == AVAPIs.AV_ER_LOSED_THIS_FRAME) {
-                System.out.printf(
+                Timber.d(
                     "[%s] Lost video frame number[%d]\n",
                     Thread.currentThread().name, frameNumber[0]
                 )
                 continue
             } else if (ret == AVAPIs.AV_ER_INCOMPLETE_FRAME) {
-                System.out.printf(
+                Timber.d(
                     "[%s] Incomplete video frame number[%d]\n",
                     Thread.currentThread().name, frameNumber[0]
                 )
                 continue
             } else if (ret == AVAPIs.AV_ER_SESSION_CLOSE_BY_REMOTE) {
-                System.out.printf(
+                Timber.d(
                     "[%s] AV_ER_SESSION_CLOSE_BY_REMOTE\n",
                     Thread.currentThread().name
                 )
                 break
             } else if (ret == AVAPIs.AV_ER_REMOTE_TIMEOUT_DISCONNECT) {
-                System.out.printf(
+                Timber.d(
                     "[%s] AV_ER_REMOTE_TIMEOUT_DISCONNECT\n",
                     Thread.currentThread().name
                 )
                 break
             } else if (ret == AVAPIs.AV_ER_INVALID_SID) {
-                System.out.printf(
+                Timber.d(
                     "[%s] Session cant be used anymore\n",
                     Thread.currentThread().name
                 )
@@ -256,45 +200,95 @@ class AVProvider {
             // Now the data is ready in videoBuffer[0 ... ret - 1]
             // Do something here
             videoSocket?.outputStream?.write(videoBuffer, 0, ret)
-            Log.d("AVProvider", "video buffer sent. size: $ret")
-           // udpVideoSocket.send(DatagramPacket(videoBuffer, 0, ret, videoAddr))
+            //Timber.d("video buffer sent. size: $ret")
+            // udpVideoSocket.send(DatagramPacket(videoBuffer, 0, ret, videoAddr))
         }
 
-        System.out.printf(
-            "[%s] Exit\n",
+        Timber.d(
+            "[%s] Exit video reader",
             Thread.currentThread().name
         )
     }
 
-    fun startVideo(){
+    fun startVideo() {
+        Timber.d("AVProviderLifecycle startVideo")
         defaultScope.launch {
-            videoSocket = videoSocketServer.accept()
-            audioSocket = audioSocketServer.accept()
+            stopJob?.join()
+            audioSocketServer = ServerSocket(audioPort)
+            videoSocketServer = ServerSocket(videoPort)
+            isRunning.set(true)
+            var ret = IOTCAPIs.IOTC_Initialize2(0)
+            Timber.d("IOTC_Initialize2() ret = %d\n", ret)
+            if (ret != IOTCAPIs.IOTC_ER_NoERROR) {
+                Timber.e("IOTCAPIs_Device exit...!!\n")
+                return@launch
+            }
+
+            // alloc 3 sessions for video and two-way audio
+            AVAPIs.avInitialize(3)
+            sid = IOTCAPIs.IOTC_Get_SessionID()
+            if (sid < 0) {
+                Timber.d("IOTC_Get_SessionID error code [%d]\n", sid)
+                return@launch
+            }
+            IOTCAPIs.IOTC_Connect_ByUID_Parallel(UID, sid)
+            Timber.d("Step 2: call IOTC_Connect_ByUID_Parallel(%s).......\n", UID)
+
+            av_client_in_config.iotc_session_id = sid
+            av_client_in_config.iotc_channel_id = 0
+            av_client_in_config.timeout_sec = 20
+            av_client_in_config.account_or_identity = "admin"
+            av_client_in_config.password_or_token = "888888"
+            av_client_in_config.resend = 1
+            av_client_in_config.security_mode = 0 //enable DTLS
+            av_client_in_config.auth_type = 0
+
+            var srvType = 0
+            var bResend = 0
+            avIndex = AVAPIs.avClientStartEx(av_client_in_config, av_client_out_config)
+            bResend = av_client_out_config.resend
+            srvType = av_client_out_config.server_type
+            Timber.d("Step 2: call avClientStartEx(%d).......\n", avIndex)
+
+            if (avIndex < 0) {
+                Timber.d("avClientStartEx failed[%d]\n", avIndex)
+                return@launch
+            }
+
+            videoSocket = videoSocketServer!!.accept()
+            audioSocket = audioSocketServer!!.accept()
+            if (startIpcamStream(avIndex)) {
+                Timber.d("index + $avIndex")
+                val deferred = async {
+                    readAudio(avIndex)
+                }
+                val deferred2 = async {
+                    readVideo(avIndex)
+                }
+                awaitAll(deferred, deferred2)
+            }
         }
     }
-    fun stopVideo(){
-        defaultScope.launch {
-            try {
-                videoSocket?.close()
-            } catch (e: Exception) {
 
-            } finally {
-                videoSocket = null
-            }
-            try {
-                audioSocket?.close()
-            } catch (e: Exception) {
-
-            } finally {
-                audioSocket = null
-            }
+    var stopJob: Job? = null
+    fun stopVideo() {
+        Timber.d("AVProviderLifecycle stopVideo")
+        stopJob = defaultScope.launch {
+            isRunning.set(false)
+            AVAPIs.avClientStop(avIndex)
+            Timber.d("avClientStop OK\n")
+            IOTCAPIs.IOTC_Session_Close(sid)
+            Timber.d("IOTC_Session_Close OK\n")
+            AVAPIs.avDeInitialize()
+            IOTCAPIs.IOTC_DeInitialize()
+            Timber.d("StreamClient exit...\n")
+            videoSocketServer?.close()
+            videoSocket = null
+            audioSocketServer?.close()
+            audioSocket = null
+            Timber.d("AVProviderLifecycle video stopped")
         }
     }
-
-    fun deinit() {
-        isRunning = false
-    }
-
 
     companion object {
         const val audioPort = 6666
@@ -306,6 +300,5 @@ class AVProvider {
         const val VIDEO_BUF_SIZE = 100000
         val localhostBytes = byteArrayOf(127, 0, 0, 1)
     }
-
 
 }

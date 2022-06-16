@@ -99,16 +99,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun stopAVProvider(){
-        val avProvider = (applicationContext as TUTKDemoApplication).avProvider
-        avProvider.deinit()
-    }
-
-    override fun onDestroy() {
-        stopAVProvider()
-        super.onDestroy()
-    }
-
     companion object {
         const val SETTINGS_FILE_NAME = "settings"
         const val UID_KEY = "UID"
