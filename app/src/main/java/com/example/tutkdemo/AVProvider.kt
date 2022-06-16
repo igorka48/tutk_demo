@@ -1,5 +1,6 @@
 package com.example.tutkdemo
 
+import android.net.Uri
 import com.tutk.IOTC.*
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -200,8 +201,6 @@ class AVProvider {
             // Now the data is ready in videoBuffer[0 ... ret - 1]
             // Do something here
             videoSocket?.outputStream?.write(videoBuffer, 0, ret)
-            //Timber.d("video buffer sent. size: $ret")
-            // udpVideoSocket.send(DatagramPacket(videoBuffer, 0, ret, videoAddr))
         }
 
         Timber.d(
@@ -210,9 +209,9 @@ class AVProvider {
         )
     }
 
-    fun startVideo() {
+    suspend fun startVideo(): AVResult {
         Timber.d("AVProviderLifecycle startVideo")
-        defaultScope.launch {
+        val initJob = defaultScope.launch {
             stopJob?.join()
             audioSocketServer = ServerSocket(audioPort)
             videoSocketServer = ServerSocket(videoPort)
@@ -249,25 +248,30 @@ class AVProvider {
             bResend = av_client_out_config.resend
             srvType = av_client_out_config.server_type
             Timber.d("Step 2: call avClientStartEx(%d).......\n", avIndex)
-
             if (avIndex < 0) {
                 Timber.d("avClientStartEx failed[%d]\n", avIndex)
                 return@launch
             }
-
+        }
+        initJob.join()
+        Timber.d("Read video");
+        defaultScope.launch {
             videoSocket = videoSocketServer!!.accept()
             audioSocket = audioSocketServer!!.accept()
+            Timber.d("Read video");
             if (startIpcamStream(avIndex)) {
                 Timber.d("index + $avIndex")
-                val deferred = async {
+                val deferred = launch {
                     readAudio(avIndex)
                 }
-                val deferred2 = async {
+                val deferred2 = launch {
                     readVideo(avIndex)
                 }
-                awaitAll(deferred, deferred2)
+                joinAll(deferred, deferred2)
             }
         }
+
+        return avResult
     }
 
     var stopJob: Job? = null
@@ -299,6 +303,12 @@ class AVProvider {
         const val FRAME_INFO_SIZE = 16
         const val VIDEO_BUF_SIZE = 100000
         val localhostBytes = byteArrayOf(127, 0, 0, 1)
+        val avResult = AVResult(
+            Uri.parse("tcp://$localhost:$videoPort"),
+            Uri.parse("tcp://$localhost:$audioPort")
+        )
     }
+
+    data class AVResult(val videoUri: Uri, val audioUri: Uri)
 
 }

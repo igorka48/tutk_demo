@@ -166,7 +166,9 @@ class ExoActivity : AppCompatActivity() {
         super.onResume()
         Log.d("Tag", "VideoPlayer. onResume")
         player?.playWhenReady = true
-        avProvider.startVideo()
+        lifecycleScope.launch {
+            avProvider.startVideo()
+        }
 
     }
 
